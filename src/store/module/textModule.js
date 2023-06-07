@@ -9,6 +9,9 @@ const textModule = {
     loading: false,
     activeKey: true,
     lang: false,
+    correctChars: 0,
+    totalChars: 0,
+    accuracy: 0,
   }),
 
   mutations: {
@@ -27,10 +30,21 @@ const textModule = {
     setLang(state, payload) {
       state.lang = payload;
     },
+    setCorrectChars(state, payload) {
+      state.correctChars = payload;
+    },
+    setTotalChars(state, payload) {
+      state.totalChars = payload;
+    },
+    setAccuracy(state, payload) {
+      state.accuracy = payload;
+    },
     resetState(state) {
       state.text = [];
       state.key = 0;
       state.activeKey = true;
+      state.correctChars = 0;
+      state.totalChars = 0;
     },
   },
 
@@ -39,13 +53,22 @@ const textModule = {
       axios
         .get("https://baconipsum.com/api/?type=meat-and-filler")
         .then(({ data }) => {
+          commit("setTotalChars", data[0].length);
           commit("setTextApi", data);
         })
         .catch((e) => console.log(e));
     },
   },
 
-  getters: {},
+  getters: {
+    accuracy(state) {
+      if (state.totalChars === 0) {
+        return 0;
+      }
+      const errorChars = state.totalChars - state.correctChars;
+      return (errorChars / state.totalChars) * 100;
+    },
+  },
 };
 
 export default textModule;

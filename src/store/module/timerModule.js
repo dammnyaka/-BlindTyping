@@ -28,6 +28,10 @@ const timerModule = {
 
   getters: {
     getTypingSpeed(state, getters, rootState) {
+      if (rootState.textModule.key === 0 || state.startTime === 0) {
+        return 0;
+      }
+
       const timeElapsed = (Date.now() - state.startTime) / 1000;
       const charactersTyped = rootState.textModule.key;
       const typingSpeed = (charactersTyped / timeElapsed) * 60;

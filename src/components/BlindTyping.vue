@@ -1,13 +1,14 @@
 <template>
   <div class="hello">
     <span
-      v-for="(letter, index) in text[0]"
+      v-for="(letter, index) in modifiedText"
       :key="index"
       class="text"
       :style="style(index)"
       >{{ letter }}</span
     >
-    <div>{{ getTypingSpeed }} зн./мин</div>
+    <div>Скорость {{ getTypingSpeed }} зн./мин</div>
+    <div>Точность: {{ accuracy.toFixed(2) }}%</div>
   </div>
 </template>
 
@@ -17,13 +18,18 @@ import { mapActions, mapState, mapMutations, mapGetters } from "vuex";
 export default {
   name: "BlindTyping",
   computed: {
-    ...mapState("textModule", ["text", "key", "activeKey"]),
+    ...mapState("textModule", ["text", "key", "activeKey", "correctChars"]),
+    ...mapGetters("textModule", ["accuracy"]),
     ...mapGetters("timerModule", ["getTypingSpeed"]),
+
+    modifiedText() {
+      return this.text[0] ? this.text[0].replace(/\s{2,}/g, " ") : "";
+    },
   },
 
   mounted() {
     document.addEventListener("keypress", (e) => {
-      this.hand(e.key);
+      this.inputKey(e.key);
     });
     this.getApiText();
   },
@@ -38,6 +44,8 @@ export default {
       "setActiveKey",
       "resetState",
       "setLang",
+      "setCorrectChars",
+      "setAccuracy",
     ]),
     ...mapActions("textModule", ["getApiText"]),
 
@@ -47,40 +55,51 @@ export default {
       "setTimer",
     ]),
 
-    hand(keypress) {
-      const match = this.text[0][this.key] === keypress;
-      if (/^[а-яА-ЯёЁ]+$/u.test(keypress)) {
-        this.setLang(true);
-      } else {
-        this.setLang(false);
-      }
-      if (this.key === 0) {
-        const typingStartTime = Date.now();
-        this.setTimer(typingStartTime);
-      }
-      if (match) {
-        this.setKey(this.key + 1);
-        this.setActiveKey(true);
+    inputKey(keypress) {
+      const match = this.modifiedText[this.key] === keypress;
+      this.setLang(/^[а-яА-ЯёЁ]+$/u.test(keypress));
 
-        if (this.text[0].length === this.key) {
-          this.setComplete(true);
-          this.setResultTypingSpeed(this.getTypingSpeed);
-        }
+      if (this.key === 0) {
+        this.setTimer(Date.now());
+      }
+
+      if (match) {
+        this.handleMatch();
       } else {
-        this.setActiveKey(false);
+        this.handleMismatch();
+      }
+
+      if (!this.activeKey) {
+        this.setCorrectChars(this.correctChars + 1);
       }
     },
 
+    handleMatch() {
+      this.setKey(this.key + 1);
+      this.setActiveKey(true);
+
+      if (this.modifiedText.length === this.key) {
+        this.setAccuracy(this.accuracy);
+        this.setComplete(true);
+        this.setResultTypingSpeed(this.getTypingSpeed);
+      }
+    },
+
+    handleMismatch() {
+      this.setActiveKey(false);
+    },
+
     style(index) {
+      const isActiveKey = index === this.key;
+      const isBeforeKey = index < this.key;
+
       return {
-        color:
-          index === this.key ? "white" : index < this.key ? "green" : "black",
-        backgroundColor:
-          index === this.key && this.activeKey
+        color: isActiveKey ? "white" : isBeforeKey ? "green" : "black",
+        backgroundColor: isActiveKey
+          ? this.activeKey
             ? "green"
-            : index === this.key && !this.activeKey
-            ? "red"
-            : "transparent",
+            : "red"
+          : "transparent",
       };
     },
   },
